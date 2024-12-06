@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF to Images</title>
+  <title>PDF to Images Downloader</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -13,22 +15,23 @@
     #output {
       margin-top: 20px;
     }
-    img {
-      max-width: 100%;
-      margin-bottom: 20px;
-    }
   </style>
 </head>
 <body>
-  <h1>PDFを画像に変換</h1>
+  <h1>PDFを画像に変換してダウンロード</h1>
   <input type="file" id="pdfInput" multiple accept="application/pdf">
+  <button id="downloadBtn" disabled>画像をダウンロード</button>
   <div id="output"></div>
 
   <script>
     document.getElementById('pdfInput').addEventListener('change', async function(event) {
       const files = event.target.files;
       const output = document.getElementById('output');
+      const zip = new JSZip();
+      let fileIndex = 0;
+
       output.innerHTML = ''; // 出力エリアをクリア
+      document.getElementById('downloadBtn').disabled = true; // ボタンを無効化
 
       for (const file of files) {
         if (file.type !== 'application/pdf') continue;
@@ -46,17 +49,25 @@
           canvas.width = viewport.width;
           canvas.height = viewport.height;
 
-          await page.render({ canvasContext: context, viewport: viewport }) .promise;
+          await page.render({ canvasContext: context, viewport: viewport }).promise;
 
           // Canvasを画像として出力
-          const img = document.createElement('img');
-          img.src = canvas.toDataURL('image/png');
-          output.appendChild(img);
+          const imgData = canvas.toDataURL('image/png');
+          zip.file(`file${fileIndex}_page${pageNum}.png`, imgData.split(',')[1], { base64: true });
         }
 
         // メモリ解放
         URL.revokeObjectURL(fileURL);
+        fileIndex++;
       }
+
+      document.getElementById('downloadBtn').disabled = false; // ボタンを有効化
+
+      // ZIPファイルをダウンロード
+      document.getElementById('downloadBtn').onclick = async function() {
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        saveAs(zipBlob, 'converted_images.zip');
+      };
     });
   </script>
 </body>
