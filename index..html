@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF to Images</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    #output {
+      margin-top: 20px;
+    }
+    img {
+      max-width: 100%;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>PDFを画像に変換</h1>
+  <input type="file" id="pdfInput" multiple accept="application/pdf">
+  <div id="output"></div>
+
+  <script>
+    document.getElementById('pdfInput').addEventListener('change', async function(event) {
+      const files = event.target.files;
+      const output = document.getElementById('output');
+      output.innerHTML = ''; // 出力エリアをクリア
+
+      for (const file of files) {
+        if (file.type !== 'application/pdf') continue;
+
+        const fileURL = URL.createObjectURL(file);
+        const pdf = await pdfjsLib.getDocument(fileURL).promise;
+
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+          const page = await pdf.getPage(pageNum);
+
+          // ページをCanvasに描画
+          const viewport = page.getViewport({ scale: 1.5 });
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+
+          await page.render({ canvasContext: context, viewport: viewport }) .promise;
+
+          // Canvasを画像として出力
+          const img = document.createElement('img');
+          img.src = canvas.toDataURL('image/png');
+          output.appendChild(img);
+        }
+
+        // メモリ解放
+        URL.revokeObjectURL(fileURL);
+      }
+    });
+  </script>
+</body>
+</html>
